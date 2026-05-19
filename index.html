@@ -619,7 +619,7 @@
       const first=streak[0], last=streak[streak.length-1];
       const temps=streak.map(r=>r[3]);
       const peakT=Math.max(...temps);
-      const meanT=(temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1);
+      const meanT=(temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1).replace(/^-0\.0$/,"0.0");
       const startStr=`${first[2]} ${MONTH_NAMES[first[1]]} ${first[0]}`;
       const endStr=`${last[2]} ${MONTH_NAMES[last[1]]} ${last[0]}`;
       const demInfo=hasDem ? streakPeakDemand(loc,streak) : null;
@@ -648,7 +648,7 @@
       <div class="results-table-wrap">
         <table>
           <thead><tr>
-            <th>Start</th><th>End</th><th>Days</th><th>Peak temp</th><th>Mean temp</th>
+            <th>Start</th><th>End</th><th>Days</th><th>${type==="max"?"Hottest":"Coldest"}</th><th>Mean temp</th>
             ${hasDem?`<th>${demandLabel(loc)} peak day</th>`:""}
             <th>How long ago</th>
           </tr></thead>
