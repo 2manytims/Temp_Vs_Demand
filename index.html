@@ -513,7 +513,7 @@
           ${tmax!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Maximum</div><div class="lookup-item-value ${tempCls(tmax,'max')}">${tmax}°C</div><div class="lookup-item-sub">${tmaxCtx}</div></div>`:""}
           ${tmin!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Minimum</div><div class="lookup-item-value ${tempCls(tmin,'min')}">${tmin}°C</div><div class="lookup-item-sub">${tminCtx}</div></div>`:""}
           ${demand?`<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value" style="font-size:1.15rem;">${demand.peak.toLocaleString()} MW</div><div class="lookup-item-sub">${demandBadge(loc,dv)}</div></div>`
-                  :`<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"Last 3 years only":"2016 to present"}</div></div>`}
+                  :`<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
           <div class="lookup-item"><div class="lookup-item-label">How long ago</div><div class="lookup-item-value" style="font-size:1.05rem;font-family:'DM Sans',sans-serif;">${yearsAgo(y)}</div><div class="lookup-item-sub">${season}</div></div>
         </div>
       </div>`;
