@@ -160,6 +160,7 @@
       <div class="control-group"><label>Temperature (°C)</label><input type="number" id="inp-threshold" value="40" step="0.5"/></div>
       <div class="control-group"><label>Month filter</label><select id="sel-month"><option value="0">All months</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
       <div class="control-group"><label>Sort by</label><select id="sel-sort"><option value="date-desc">Most recent first</option><option value="date-asc">Oldest first</option><option value="temp-desc">Hottest first</option><option value="temp-asc">Coolest first</option></select></div>
+      <div class="control-group"><label>Day type</label><select id="sel-daytype"><option value="all">All days</option><option value="weekday">Weekdays only</option><option value="weekend">Weekends only</option></select></div>
     </div>
     <button class="btn-search" onclick="runSearch()">
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -444,6 +445,20 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Day helpers
+  // ---------------------------------------------------------------------------
+  const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  function dayName(y, m, d) {
+    return DAY_NAMES[new Date(y, m-1, d).getDay()];
+  }
+
+  function isWeekend(y, m, d) {
+    const dow = new Date(y, m-1, d).getDay();
+    return dow === 0 || dow === 6;
+  }
+
+  // ---------------------------------------------------------------------------
   // Threshold search (unchanged)
   // ---------------------------------------------------------------------------
   async function runSearch() {
@@ -466,6 +481,9 @@
       if(cond==="lte") return t<=thresh;
       return Math.abs(t-thresh)<=1.0;
     });
+    const daytype = document.getElementById("sel-daytype").value;
+    if(daytype==="weekday") filtered = filtered.filter(([y,m,d]) => !isWeekend(y,m,d));
+    if(daytype==="weekend") filtered = filtered.filter(([y,m,d]) =>  isWeekend(y,m,d));
     if(cond==="eq")         filtered.sort((a,b)=>Math.abs(a[3]-thresh)-Math.abs(b[3]-thresh));
     if(sort==="date-desc")  filtered.sort((a,b)=>b[0]-a[0]||b[1]-a[1]||b[2]-a[2]);
     else if(sort==="date-asc")  filtered.sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
@@ -754,8 +772,11 @@
       const ds     = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const isOld  = oldFlag===1;
       const sb     = stInfo ? (isOld ? `<span class="station-badge-old">${stInfo.old}</span>` : `<span class="station-badge-cur">${stInfo.current}</span>`) : "";
+      const dn = dayName(y,m,d);
+      const wknd = isWeekend(y,m,d);
       return `<tr class="${isOld?"row-old":""}" style="cursor:pointer;" onclick="jumpToDateLookup('${loc}',${y},${m},${d},'${type}')">
         <td class="td-date">${d} ${MONTH_NAMES[m]} ${y}</td>
+        <td style="font-size:0.8rem;font-weight:${wknd?"600":"400"};color:${wknd?"var(--accent)":"var(--muted)"};">${dn}</td>
         <td><span class="td-season season-${season}">${SEASON_LABEL[season]}</span></td>
         <td class="td-temp ${tc}">${t}°C</td>
         ${stInfo?`<td>${sb}</td>`:""}
@@ -764,7 +785,7 @@
       </tr>`;
     }).join("");
     return `<table><thead><tr>
-      <th>Date</th><th>Season</th><th>Temperature</th>
+      <th>Date</th><th>Day</th><th>Season</th><th>Temperature</th>
       ${stInfo?"<th>Station</th>":""}
       ${hasDem?`<th>${demLbl}</th>`:""}
       <th>How long ago</th>
