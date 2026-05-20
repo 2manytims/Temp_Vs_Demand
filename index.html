@@ -320,6 +320,7 @@
   let ausObs     = null, ausdem = null;
   let jpnObs     = null, jpndem = null;
   let allResults = [], currentPage = 1;
+  let dateLookupChart = null;
   const PAGE_SIZE = 25;
 
   // ---------------------------------------------------------------------------
@@ -544,7 +545,79 @@
                   :`<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
           <div class="lookup-item"><div class="lookup-item-label">How long ago</div><div class="lookup-item-value" style="font-size:1.05rem;font-family:'DM Sans',sans-serif;">${yearsAgo(y)}</div><div class="lookup-item-sub">${season}</div></div>
         </div>
+        ${demand && tmax!==null ? `
+        <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">
+            All ${MONTH_FULL[m]} days · ${loc} · Tmax vs ${demLbl}. Red dot is ${d} ${MONTH_FULL[m]} ${y}.
+          </div>
+          <div style="position:relative;width:100%;height:260px;">
+            <canvas id="lookup-scatter" role="img" aria-label="Scatter plot of ${loc} ${MONTH_FULL[m]} Tmax vs ${demLbl}. The date ${d} ${MONTH_FULL[m]} ${y} is highlighted in red.">${loc} ${MONTH_FULL[m]}: Tmax ${tmax}°C, ${demLbl} ${demand.peak.toLocaleString()} MW on ${d} ${MONTH_FULL[m]} ${y}.</canvas>
+          </div>
+          <div style="display:flex;align-items:center;gap:1.25rem;margin-top:0.6rem;font-size:0.72rem;color:var(--muted);">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:#b5d4f4;border:1px solid #378add;display:inline-block;"></span>Historical ${MONTH_NAMES[m]} days</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:11px;height:11px;border-radius:50%;background:#c0390b;display:inline-block;"></span>${d} ${MONTH_NAMES[m]} ${y}</span>
+          </div>
+        </div>` : ""}
       </div>`;
+
+    if(demand && tmax!==null) {
+      if(dateLookupChart) { dateLookupChart.destroy(); dateLookupChart=null; }
+      const maxRecs = obs()[loc]?.max || [];
+      const pts = [];
+      maxRecs.forEach(([ry,rm,rd,rt]) => {
+        if(rm!==m) return;
+        const ds=`${ry}-${String(rm).padStart(2,"0")}-${String(rd).padStart(2,"0")}`;
+        const di=getDemand(loc,ds);
+        if(di) pts.push({x:rt, y:di.peak});
+      });
+      const canvas = document.getElementById("lookup-scatter");
+      if(canvas && pts.length>0) {
+        const allX=pts.map(p=>p.x), allY=pts.map(p=>p.y);
+        const xMin=Math.floor(Math.min(...allX)-1), xMax=Math.ceil(Math.max(...allX,tmax)+1);
+        const yMin=Math.floor(Math.min(...allY)*0.97), yMax=Math.ceil(Math.max(...allY,demand.peak)*1.03);
+        dateLookupChart = new Chart(canvas, {
+          type:'scatter',
+          data:{
+            datasets:[
+              {
+                label:`Historical ${MONTH_FULL[m]}`,
+                data:pts,
+                backgroundColor:'rgba(53,130,221,0.22)',
+                borderColor:'rgba(53,130,221,0.45)',
+                borderWidth:1,
+                pointRadius:4,
+                pointHoverRadius:5,
+              },
+              {
+                label:`${d} ${MONTH_NAMES[m]} ${y}`,
+                data:[{x:tmax,y:demand.peak}],
+                backgroundColor:'#c0390b',
+                borderColor:'#8b1a1a',
+                borderWidth:1.5,
+                pointRadius:9,
+                pointHoverRadius:10,
+              }
+            ]
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{
+              legend:{display:false},
+              tooltip:{callbacks:{label:ctx=>{
+                const tag=ctx.datasetIndex===1?` — ${d} ${MONTH_NAMES[m]} ${y}`:'';
+                return`${ctx.parsed.x}°C · ${ctx.parsed.y.toLocaleString()} MW${tag}`;
+              }}}
+            },
+            scales:{
+              x:{min:xMin,max:xMax,title:{display:true,text:'Daily maximum (°C)',color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>v+'°'}},
+              y:{min:yMin,max:yMax,title:{display:true,text:`${demLbl} (MW)`,color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>(v/1000).toFixed(1)+'k'}}
+            },
+            layout:{padding:{top:8,right:16,bottom:4,left:4}}
+          }
+        });
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -766,5 +839,6 @@
     loadObs().then(ok => { if(ok) { loadDemand(); runSearch(); } });
   });
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </body>
 </html>
