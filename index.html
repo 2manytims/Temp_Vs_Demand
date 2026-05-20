@@ -136,7 +136,7 @@
     <div style="font-weight:700;color:var(--navy);margin-bottom:0.5rem;">How to use</div>
     <div style="margin-bottom:0.4rem;">🌏 Toggle between <strong>Australia</strong> and <strong>Japan</strong> to switch datasets.</div>
     <div style="margin-bottom:0.4rem;">🔍 <strong>Threshold Search</strong> — find all days above or below a temperature. <span style="color:var(--accent);font-weight:500;">Click any result row</span> to view a temperature vs demand scatter for that day.</div>
-    <div style="margin-bottom:0.4rem;">📅 <strong>Date Lookup</strong> — enter a specific date to see temperature, demand, and its seasonal scatter context.</div>
+    <div style="margin-bottom:0.4rem;">📅 <strong>Date Lookup</strong> — enter a specific date to see temperature, demand, its seasonal scatter context, and 3pm dewpoint &amp; apparent temperature from the nearest airport station.</div>
     <div>🔥 <strong>Streak Search</strong> — find consecutive-day heatwaves or cold snaps meeting a threshold.</div>
   </div>
 
@@ -358,7 +358,8 @@
 
   function demandLabel(loc) {
     const locs = country==="aus" ? AUS_LOCATIONS : JPN_LOCATIONS;
-    return locs.find(l=>l.name===loc)?.label || "Demand";
+    const base = locs.find(l=>l.name===loc)?.label || "Demand";
+    return base + " (daily peak)";
   }
 
   function demandNote() {
@@ -387,7 +388,7 @@
         <div class="lookup-item-sub">No METAR data for this location</div>
       </div>
       <div class="lookup-item">
-        <div class="lookup-item-label">App. Temp</div>
+        <div class="lookup-item-label">App. Temp (3pm)</div>
         <div class="lookup-item-value d-na" style="font-size:0.9rem;font-family:'DM Sans',sans-serif;">Not available</div>
         <div class="lookup-item-sub">No METAR data for this location</div>
       </div>`;
@@ -418,7 +419,7 @@
       const monthly = (locData.at || []).filter(r=>r[1]===m).map(r=>r[3]);
       const pct = monthly.length ? ((monthly.filter(v=>v<=at).length/monthly.length)*100).toFixed(0) : null;
       tiles += `<div class="lookup-item">
-        <div class="lookup-item-label">App. Temp</div>
+        <div class="lookup-item-label">App. Temp (3pm)</div>
         <div class="lookup-item-value">${at}°C</div>
         ${pct!==null?`<div class="lookup-item-sub">${MONTH_NAMES[m]} ${pct}th percentile</div>`:""}
         <div class="lookup-item-source">${stationNote}</div>
