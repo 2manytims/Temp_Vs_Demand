@@ -98,6 +98,7 @@
     .lookup-item-value.warm{color:var(--warm);}
     .lookup-item-value.cool{color:var(--cool);}
     .lookup-item-sub{font-size:0.75rem;color:var(--muted);margin-top:0.15rem;}
+    .lookup-item-source{font-size:0.68rem;color:var(--muted);margin-top:0.3rem;font-style:italic;}
     .pagination{display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:1rem;}
     .page-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.7rem;font-size:0.8rem;cursor:pointer;color:var(--navy);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
     .page-btn:hover{background:var(--sky);}
@@ -130,6 +131,15 @@
 </section>
 
 <main>
+  <!-- How to use -->
+  <div style="margin-bottom:1.5rem;padding:0.9rem 1.1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.8rem;color:var(--muted);line-height:1.6;">
+    <div style="font-weight:700;color:var(--navy);margin-bottom:0.5rem;">How to use</div>
+    <div style="margin-bottom:0.4rem;">🌏 Toggle between <strong>Australia</strong> and <strong>Japan</strong> to switch datasets.</div>
+    <div style="margin-bottom:0.4rem;">🔍 <strong>Threshold Search</strong> — find all days above or below a temperature. <span style="color:var(--accent);font-weight:500;">Click any result row</span> to view a temperature vs demand scatter for that day.</div>
+    <div style="margin-bottom:0.4rem;">📅 <strong>Date Lookup</strong> — enter a specific date to see temperature, demand, and its seasonal scatter context.</div>
+    <div>🔥 <strong>Streak Search</strong> — find consecutive-day heatwaves or cold snaps meeting a threshold.</div>
+  </div>
+
   <div class="country-toggle">
     <button class="country-btn active" id="btn-aus" onclick="setCountry('aus')">Australia</button>
     <button class="country-btn" id="btn-jpn" onclick="setCountry('jpn')">Japan</button>
@@ -139,15 +149,6 @@
     <button class="mode-tab active" id="tab-search" onclick="setMode('search')">🔍 Threshold Search</button>
     <button class="mode-tab" id="tab-date" onclick="setMode('date')">📅 Date Lookup</button>
     <button class="mode-tab" id="tab-streak" onclick="setMode('streak')">🔥 Streak Search</button>
-  </div>
-
-
-  <!-- How to use -->
-  <div style="margin-bottom:1.5rem;padding:0.9rem 1.1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.8rem;color:var(--muted);line-height:1.7;">
-    <span style="font-weight:600;color:var(--navy);">How to use &nbsp;</span>
-    <span style="margin-right:1.25rem;">🔍 <strong>Threshold Search</strong> — find all days above or below a temperature. <span style="color:var(--accent);font-weight:500;">Click any result row</span> to view a temperature vs demand scatter for that day.</span>
-    <span style="margin-right:1.25rem;">📅 <strong>Date Lookup</strong> — enter a specific date to see temperature, demand, and its seasonal scatter context.</span>
-    <span>🔥 <strong>Streak Search</strong> — find consecutive-day heatwaves or cold snaps meeting a threshold.</span>
   </div>
 
   <div id="panel-search" class="search-panel">
@@ -203,6 +204,7 @@
   &nbsp;·&nbsp; AUS demand: <a href="https://www.aemo.com.au">AEMO</a>
   &nbsp;·&nbsp; JPN obs: <a href="https://www.jma.go.jp">JMA</a>
   &nbsp;·&nbsp; JPN demand: <a href="https://japanesepower.org">japanesepower.org</a>
+  &nbsp;·&nbsp; Dewpoint &amp; App. Temp: <a href="https://mesonet.agron.iastate.edu">IEM ASOS</a>
 </footer>
 
 <script>
@@ -237,6 +239,7 @@
 
   let country = "aus", mode = "search";
   let ausObs = null, ausdem = null, jpnObs = null, jpndem = null;
+  let ausmetar = null, jpnmetar = null;
   let allResults = [], currentPage = 1, dateLookupChart = null;
   const PAGE_SIZE = 25;
 
@@ -314,9 +317,20 @@
     }
   }
 
-  function obs()     { return country==="aus" ? ausObs : jpnObs; }
-  function dem()     { return country==="aus" ? ausdem : jpndem; }
-  function seasons() { return country==="aus" ? AUS_SEASONS : JPN_SEASONS; }
+  async function loadMetar() {
+    if(country==="aus") {
+      if(ausmetar) return;
+      try { const r=await fetch("aus_metar.json"); if(r.ok) ausmetar=await r.json(); } catch(e) {}
+    } else {
+      if(jpnmetar) return;
+      try { const r=await fetch("japan_metar.json"); if(r.ok) jpnmetar=await r.json(); } catch(e) {}
+    }
+  }
+
+  function obs()      { return country==="aus" ? ausObs   : jpnObs;   }
+  function dem()      { return country==="aus" ? ausdem   : jpndem;   }
+  function metar()    { return country==="aus" ? ausmetar : jpnmetar; }
+  function seasons()  { return country==="aus" ? AUS_SEASONS : JPN_SEASONS; }
   function showError(msg)   { document.getElementById("results-area").innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${msg}</p></div>`; }
   function showLoading(msg) { document.getElementById("results-area").innerHTML=`<div class="loading"><div class="spinner"></div>${msg}</div>`; }
 
@@ -354,6 +368,67 @@
   }
 
   // ---------------------------------------------------------------------------
+  // METAR helpers
+  // ---------------------------------------------------------------------------
+  function getMetar(loc, y, m) {
+    const mt = metar();
+    if(!mt || !mt[loc]) return null;
+    return mt[loc];
+  }
+
+  function metarTiles(loc, y, m, d) {
+    const mt = metar();
+    if(!mt) return "";  // not loaded yet — show nothing
+    if(!mt[loc]) {
+      // Metar loaded but no data for this location
+      return `<div class="lookup-item">
+        <div class="lookup-item-label">3pm Dewpoint</div>
+        <div class="lookup-item-value d-na" style="font-size:0.9rem;font-family:'DM Sans',sans-serif;">Not available</div>
+        <div class="lookup-item-sub">No METAR data for this location</div>
+      </div>
+      <div class="lookup-item">
+        <div class="lookup-item-label">App. Temp</div>
+        <div class="lookup-item-value d-na" style="font-size:0.9rem;font-family:'DM Sans',sans-serif;">Not available</div>
+        <div class="lookup-item-sub">No METAR data for this location</div>
+      </div>`;
+    }
+    const locData = mt[loc];
+    const ds = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+    const tdRec = locData.td?.find(r => r[0]===y && r[1]===m && r[2]===d);
+    const atRec = locData.at?.find(r => r[0]===y && r[1]===m && r[2]===d);
+
+    const stationNote = `${locData.station_name} · ${locData.distance_km}km`;
+    let tiles = "";
+
+    if(tdRec) {
+      const td = tdRec[3];
+      const monthly = (locData.td || []).filter(r=>r[1]===m).map(r=>r[3]);
+      const pct = monthly.length ? ((monthly.filter(v=>v<=td).length/monthly.length)*100).toFixed(0) : null;
+      tiles += `<div class="lookup-item">
+        <div class="lookup-item-label">3pm Dewpoint</div>
+        <div class="lookup-item-value">${td}°C</div>
+        ${pct!==null?`<div class="lookup-item-sub">${MONTH_NAMES[m]} ${pct}th percentile</div>`:""}
+        <div class="lookup-item-source">${stationNote}</div>
+      </div>`;
+    }
+
+    if(atRec) {
+      const at = atRec[3];
+      const monthly = (locData.at || []).filter(r=>r[1]===m).map(r=>r[3]);
+      const pct = monthly.length ? ((monthly.filter(v=>v<=at).length/monthly.length)*100).toFixed(0) : null;
+      tiles += `<div class="lookup-item">
+        <div class="lookup-item-label">App. Temp</div>
+        <div class="lookup-item-value">${at}°C</div>
+        ${pct!==null?`<div class="lookup-item-sub">${MONTH_NAMES[m]} ${pct}th percentile</div>`:""}
+        <div class="lookup-item-source">${stationNote}</div>
+      </div>`;
+    }
+
+    return tiles;
+  }
+
+  // ---------------------------------------------------------------------------
   // Temp colour
   // ---------------------------------------------------------------------------
   function tempCls(t, type) {
@@ -368,7 +443,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Threshold search
+  // Threshold search (unchanged)
   // ---------------------------------------------------------------------------
   async function runSearch() {
     if(!await loadObs()) return;
@@ -400,11 +475,12 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Date lookup
+  // Date lookup — now also loads METAR
   // ---------------------------------------------------------------------------
   async function runDateLookup(scatterType) {
     if(!await loadObs()) return;
     await loadDemand();
+    await loadMetar();
     const loc = document.getElementById("date-location").value;
     const dv  = document.getElementById("date-input").value;
     if(!dv) { alert("Please select a date."); return; }
@@ -438,6 +514,8 @@
       if(sm.length) tminCtx=`${MONTH_NAMES[m]} ${((sm.filter(v=>v<=tmin).length/sm.length)*100).toFixed(0)}th percentile`;
     }
 
+    const metarHTML = metarTiles(loc, y, m, d);
+
     area.innerHTML=`
       <div class="date-lookup-card">
         <h3>${loc} — ${d} ${MONTH_FULL[m]} ${y}
@@ -446,6 +524,7 @@
         <div class="lookup-grid">
           ${tmax!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Maximum</div><div class="lookup-item-value ${tempCls(tmax,'max')}">${tmax}°C</div><div class="lookup-item-sub">${tmaxCtx}</div></div>`:""}
           ${tmin!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Minimum</div><div class="lookup-item-value ${tempCls(tmin,'min')}">${tmin}°C</div><div class="lookup-item-sub">${tminCtx}</div></div>`:""}
+          ${metarHTML}
           ${demand
             ? `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value" style="font-size:1.15rem;">${demand.peak.toLocaleString()} MW</div><div class="lookup-item-sub">${demandBadge(loc,dv)}</div></div>`
             : `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
@@ -470,8 +549,8 @@
       if(dateLookupChart) { dateLookupChart.destroy(); dateLookupChart=null; }
       const _sType = scatterType || 'max';
       const scatterRecs = obs()[loc]?.[_sType] || [];
-      const scatterAxisLabel = _sType === 'max' ? 'Daily maximum (°C)' : 'Daily minimum (°C)';
-      const scatterHighlightT = _sType === 'max' ? tmax : tmin;
+      const scatterAxisLabel = _sType==='max' ? 'Daily maximum (°C)' : 'Daily minimum (°C)';
+      const scatterHighlightT = _sType==='max' ? tmax : tmin;
       const pts = [];
       scatterRecs.forEach(([ry,rm,rd,rt]) => {
         if(rm!==m) return;
@@ -480,9 +559,9 @@
         if(di) pts.push({x:rt, y:di.peak});
       });
       const canvas = document.getElementById("lookup-scatter");
-      if(canvas && pts.length>0) {
+      if(canvas && pts.length>0 && scatterHighlightT!==null) {
         const allX=pts.map(p=>p.x), allY=pts.map(p=>p.y);
-        const xMin=Math.floor(Math.min(...allX)-1), xMax=Math.ceil(Math.max(...allX,(scatterHighlightT||0))+1);
+        const xMin=Math.floor(Math.min(...allX)-1), xMax=Math.ceil(Math.max(...allX,scatterHighlightT)+1);
         const yMin=Math.floor(Math.min(...allY)*0.97), yMax=Math.ceil(Math.max(...allY,demand.peak)*1.03);
         dateLookupChart = new Chart(canvas, {
           type:'scatter',
@@ -507,9 +586,9 @@
     }
   }
 
-  let _jumpType = "max";
+  let _jumpType = 'max';
   function jumpToDateLookup(loc, y, m, d, type) {
-    _jumpType = type || "max";
+    _jumpType = type || 'max';
     setMode('date');
     document.getElementById('date-location').value = loc;
     document.getElementById('date-input').value = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
@@ -518,7 +597,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Streak search
+  // Streak search (unchanged)
   // ---------------------------------------------------------------------------
   async function runStreakSearch() {
     if(!await loadObs()) return;
