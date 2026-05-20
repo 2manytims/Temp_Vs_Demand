@@ -535,10 +535,13 @@
 
     const metarHTML = metarTiles(loc, y, m, d);
 
+    const lookupDay = dayName(y,m,d);
+    const lookupWknd = isWeekend(y,m,d);
     area.innerHTML=`
       <div class="date-lookup-card">
         <h3>${loc} — ${d} ${MONTH_FULL[m]} ${y}
-          <span style="font-family:'DM Sans',sans-serif;font-size:0.83rem;font-weight:400;color:var(--muted);margin-left:0.5rem;">${season} ${stBadge}</span>
+          <span style="font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:${lookupWknd?'600':'400'};color:${lookupWknd?'var(--accent)':'var(--muted)'};margin-left:0.4rem;">${lookupDay}</span>
+          <span style="font-family:'DM Sans',sans-serif;font-size:0.83rem;font-weight:400;color:var(--muted);margin-left:0.4rem;">${season} ${stBadge}</span>
         </h3>
         <div class="lookup-grid">
           ${tmax!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Maximum</div><div class="lookup-item-value ${tempCls(tmax,'max')}">${tmax}°C</div><div class="lookup-item-sub">${tmaxCtx}</div></div>`:""}
@@ -557,8 +560,9 @@
           <div style="position:relative;width:100%;height:260px;">
             <canvas id="lookup-scatter"></canvas>
           </div>
-          <div style="display:flex;align-items:center;gap:1.25rem;margin-top:0.6rem;font-size:0.72rem;color:var(--muted);">
-            <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:#b5d4f4;border:1px solid #378add;display:inline-block;"></span>Historical ${MONTH_NAMES[m]} days</span>
+          <div style="display:flex;align-items:center;gap:1.25rem;margin-top:0.6rem;font-size:0.72rem;color:var(--muted);flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:#b5d4f4;border:1px solid #378add;display:inline-block;"></span>Weekday</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:rgba(232,98,42,0.35);border:1px solid rgba(232,98,42,0.7);display:inline-block;"></span>Weekend</span>
             <span style="display:flex;align-items:center;gap:4px;"><span style="width:11px;height:11px;border-radius:50%;background:#c0390b;display:inline-block;"></span>${d} ${MONTH_NAMES[m]} ${y}</span>
           </div>
         </div>` : ""}
@@ -575,17 +579,20 @@
         if(rm!==m) return;
         const ds=`${ry}-${String(rm).padStart(2,"0")}-${String(rd).padStart(2,"0")}`;
         const di=getDemand(loc,ds);
-        if(di) pts.push({x:rt, y:di.peak});
+        if(di) pts.push({x:rt, y:di.peak, wknd:isWeekend(ry,rm,rd)});
       });
       const canvas = document.getElementById("lookup-scatter");
       if(canvas && pts.length>0 && scatterHighlightT!==null) {
         const allX=pts.map(p=>p.x), allY=pts.map(p=>p.y);
         const xMin=Math.floor(Math.min(...allX)-1), xMax=Math.ceil(Math.max(...allX,scatterHighlightT)+1);
         const yMin=Math.floor(Math.min(...allY)*0.97), yMax=Math.ceil(Math.max(...allY,demand.peak)*1.03);
+        const wdPts = pts.filter(p=>p.wknd===false);
+        const wePts = pts.filter(p=>p.wknd===true);
         dateLookupChart = new Chart(canvas, {
           type:'scatter',
           data:{datasets:[
-            {label:`Historical ${MONTH_FULL[m]}`,data:pts,backgroundColor:'rgba(53,130,221,0.22)',borderColor:'rgba(53,130,221,0.45)',borderWidth:1,pointRadius:4,pointHoverRadius:5},
+            {label:'Weekday',data:wdPts,backgroundColor:'rgba(53,130,221,0.22)',borderColor:'rgba(53,130,221,0.45)',borderWidth:1,pointRadius:4,pointHoverRadius:5},
+            {label:'Weekend',data:wePts,backgroundColor:'rgba(232,98,42,0.22)',borderColor:'rgba(232,98,42,0.55)',borderWidth:1,pointRadius:4,pointHoverRadius:5},
             {label:`${d} ${MONTH_NAMES[m]} ${y}`,data:[{x:scatterHighlightT,y:demand.peak}],backgroundColor:'#c0390b',borderColor:'#8b1a1a',borderWidth:1.5,pointRadius:9,pointHoverRadius:10}
           ]},
           options:{
