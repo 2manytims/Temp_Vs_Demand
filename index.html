@@ -766,6 +766,7 @@
         <div class="stat-card"><div class="stat-label">Most active year</div><div class="stat-value">${topY[0]}</div><div class="stat-sub">${topY[1]} day${topY[1]!==1?"s":""}</div></div>
       </div>
       <div class="results-table-wrap">${renderTable(loc,type,hasDem)}</div>
+      <div style="font-size:0.73rem;color:var(--muted);margin-top:0.5rem;padding-left:0.25rem;">Click any row to view the temperature-demand scatter for that day.</div>
       ${renderPagination()}`;
   }
 
@@ -781,7 +782,7 @@
       const ds=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const isOld=oldFlag===1;
       const sb=stInfo?(isOld?`<span class="station-badge-old">${stInfo.old}</span>`:`<span class="station-badge-cur">${stInfo.current}</span>`):"";
-      return`<tr class="${isOld?"row-old":""}">
+      return`<tr class="${isOld?"row-old":""}" style="cursor:pointer;" onclick="jumpToDateLookup('${loc}',${y},${m},${d})">`;
         <td class="td-date">${d} ${MONTH_NAMES[m]} ${y}</td>
         <td><span class="td-season season-${season}">${SEASON_LABEL[season]}</span></td>
         <td class="td-temp ${tc}">${t}°C</td>
@@ -832,6 +833,14 @@
   function yearsAgo(y) {
     const d=new Date().getFullYear()-y;
     if(d===0)return"This year";if(d===1)return"1 year ago";return`${d} years ago`;
+  }
+
+  function jumpToDateLookup(loc, y, m, d) {
+    setMode('date');
+    document.getElementById('date-location').value = loc;
+    document.getElementById('date-input').value = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    runDateLookup();
+    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   window.addEventListener("load", () => {
