@@ -457,7 +457,7 @@
         </div>` : ""}
       </div>`;
 
-    if(demand && scatterHighlightT!==null && scatterHighlightT!==undefined) {
+    if(demand && (tmax!==null || tmin!==null)) {
       if(dateLookupChart) { dateLookupChart.destroy(); dateLookupChart=null; }
       const _sType = scatterType || 'max';
       const scatterRecs = obs()[loc]?.[_sType] || [];
