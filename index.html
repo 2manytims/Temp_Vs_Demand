@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Temperature vs Demand Search</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <style>
     :root{
       --navy:#1e3a5f;--navy-mid:#2c5282;--sky:#ccd9e8;--bg:#f0f4f8;
@@ -13,31 +14,25 @@
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-
     header{background:var(--navy);padding:0 2.5rem;display:flex;align-items:center;justify-content:space-between;height:68px;box-shadow:0 2px 12px rgba(0,0,0,0.18);position:sticky;top:0;z-index:100;}
     .header-brand{display:flex;align-items:center;gap:0.75rem;}
     .header-logo{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;}
     .header-logo svg{width:20px;height:20px;fill:white;}
     .header-title{font-family:'DM Serif Display',serif;font-size:1.15rem;color:white;}
-
     .hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);padding:2.5rem 2.5rem 2rem;text-align:center;position:relative;overflow:hidden;}
     .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 75% 40%,rgba(232,98,42,0.1) 0%,transparent 60%);pointer-events:none;}
     .hero-eyebrow{font-size:0.75rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:0.5rem;}
     .hero h1{font-family:'DM Serif Display',serif;font-size:clamp(1.5rem,3vw,2.2rem);color:white;margin-bottom:0.6rem;}
     .hero-sub{font-size:0.9rem;color:var(--sky);font-weight:300;max-width:500px;margin:0 auto;line-height:1.6;}
-
     main{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 4rem;}
-
     .country-toggle{display:flex;gap:0;margin-bottom:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-width:320px;}
     .country-btn{flex:1;padding:0.8rem 1rem;font-size:0.9rem;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;transition:all 0.15s;text-align:center;display:flex;align-items:center;justify-content:center;gap:0.4rem;}
     .country-btn.active{background:var(--navy);color:white;}
     .country-btn:hover:not(.active){background:var(--sky);color:var(--navy);}
-
     .mode-tabs{display:flex;margin-bottom:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-width:500px;}
     .mode-tab{flex:1;padding:0.7rem 1rem;font-size:0.85rem;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;transition:all 0.15s;text-align:center;}
     .mode-tab.active{background:var(--navy);color:white;}
     .mode-tab:hover:not(.active){background:var(--sky);color:var(--navy);}
-
     .search-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem 2rem;box-shadow:0 4px 20px rgba(30,58,95,0.08);margin-bottom:1.5rem;}
     .search-panel h2{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--navy);margin-bottom:1.25rem;padding-bottom:0.65rem;border-bottom:1px solid var(--border);}
     .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:1rem;margin-bottom:1.25rem;}
@@ -50,33 +45,27 @@
     .btn-search{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:var(--navy);color:white;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;padding:0.65rem 1.5rem;border-radius:7px;transition:background 0.15s;width:100%;}
     .btn-search:hover{background:var(--navy-mid);}
     .btn-search svg{width:15px;height:15px;fill:white;}
-
     .station-note{margin-top:1rem;padding:0.75rem 1rem;background:#f0f6ff;border:1px solid #c5d8f0;border-radius:7px;font-size:0.78rem;color:var(--navy);line-height:1.6;}
     .station-badge-old{display:inline-block;padding:0.1rem 0.45rem;border-radius:999px;font-size:0.67rem;font-weight:600;background:#fff3cd;color:#7a5000;border:1px solid #e8c840;margin-left:3px;vertical-align:middle;}
     .station-badge-cur{display:inline-block;padding:0.1rem 0.45rem;border-radius:999px;font-size:0.67rem;font-weight:600;background:#e8f5e9;color:#2a6e3f;border:1px solid #a8d5b5;margin-left:3px;vertical-align:middle;}
-
     .demand-badge{display:inline-block;padding:0.15rem 0.55rem;border-radius:999px;font-size:0.72rem;font-weight:600;white-space:nowrap;}
     .d-extreme{background:#fde8e8;color:#8b1a1a;}
     .d-high{background:#fde8d8;color:#7a3000;}
     .d-elevated{background:#fef9e2;color:#7a5500;}
     .d-normal{background:#f0f4f8;color:#5a7080;}
     .d-na{background:#f0f4f8;color:#9ab0c0;font-style:italic;}
-
     .loading{text-align:center;padding:3rem;color:var(--muted);}
     .spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;}
     @keyframes spin{to{transform:rotate(360deg);}}
-
     .results-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;}
     .results-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--navy);}
     .results-count{font-size:0.8rem;color:var(--muted);}
     .demand-note{font-size:0.76rem;color:var(--muted);margin-bottom:0.9rem;padding:0.5rem 0.8rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:inline-block;}
-
     .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.65rem;margin-bottom:1.25rem;}
     .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;}
     .stat-label{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.25rem;}
     .stat-value{font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--navy);}
     .stat-sub{font-size:0.72rem;color:var(--muted);margin-top:0.1rem;}
-
     .results-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
     table{width:100%;border-collapse:collapse;font-size:0.87rem;}
     thead{background:var(--navy);}
@@ -100,7 +89,6 @@
     .season-autumn{background:#fef3e2;color:#b35a00;}
     .season-winter{background:#dceeff;color:#1a4fa0;}
     .season-spring{background:#dff5e8;color:#1a7a4a;}
-
     .date-lookup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
     .date-lookup-card h3{font-family:'DM Serif Display',serif;font-size:1.25rem;color:var(--navy);margin-bottom:1rem;padding-bottom:0.65rem;border-bottom:1px solid var(--border);}
     .lookup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0.9rem;}
@@ -110,18 +98,15 @@
     .lookup-item-value.warm{color:var(--warm);}
     .lookup-item-value.cool{color:var(--cool);}
     .lookup-item-sub{font-size:0.75rem;color:var(--muted);margin-top:0.15rem;}
-
     .pagination{display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:1rem;}
     .page-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.7rem;font-size:0.8rem;cursor:pointer;color:var(--navy);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
     .page-btn:hover{background:var(--sky);}
     .page-btn.active{background:var(--navy);color:white;border-color:var(--navy);}
     .page-info{font-size:0.78rem;color:var(--muted);}
-
     .empty{text-align:center;padding:3rem 1rem;color:var(--muted);}
     .empty-icon{font-size:2.5rem;margin-bottom:0.6rem;}
     .empty h3{font-family:'DM Serif Display',serif;color:var(--navy);font-size:1.1rem;margin-bottom:0.4rem;}
     .empty p{font-size:0.83rem;line-height:1.6;}
-
     footer{background:var(--navy);color:var(--sky);text-align:center;padding:1.25rem;font-size:0.76rem;font-weight:300;}
     footer strong{color:white;}
     footer a{color:var(--sky);}
@@ -145,68 +130,26 @@
 </section>
 
 <main>
-
-  <!-- Country toggle -->
   <div class="country-toggle">
     <button class="country-btn active" id="btn-aus" onclick="setCountry('aus')">Australia</button>
     <button class="country-btn" id="btn-jpn" onclick="setCountry('jpn')">Japan</button>
   </div>
 
-  <!-- Mode tabs -->
   <div class="mode-tabs">
     <button class="mode-tab active" id="tab-search" onclick="setMode('search')">🔍 Threshold Search</button>
     <button class="mode-tab" id="tab-date" onclick="setMode('date')">📅 Date Lookup</button>
     <button class="mode-tab" id="tab-streak" onclick="setMode('streak')">🔥 Streak Search</button>
   </div>
 
-  <!-- Search panel -->
   <div id="panel-search" class="search-panel">
     <h2>Search Parameters</h2>
     <div class="controls">
-      <div class="control-group">
-        <label>Location</label>
-        <select id="sel-location"></select>
-      </div>
-      <div class="control-group">
-        <label>Temperature type</label>
-        <select id="sel-type">
-          <option value="max">Maximum (Daily High)</option>
-          <option value="min">Minimum (Overnight Low)</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label>Condition</label>
-        <select id="sel-condition">
-          <option value="gte">≥  At or above</option>
-          <option value="lte">≤  At or below</option>
-          <option value="eq">≈  Closest to</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label>Temperature (°C)</label>
-        <input type="number" id="inp-threshold" value="40" step="0.5"/>
-      </div>
-      <div class="control-group">
-        <label>Month filter</label>
-        <select id="sel-month">
-          <option value="0">All months</option>
-          <option value="1">January</option><option value="2">February</option>
-          <option value="3">March</option><option value="4">April</option>
-          <option value="5">May</option><option value="6">June</option>
-          <option value="7">July</option><option value="8">August</option>
-          <option value="9">September</option><option value="10">October</option>
-          <option value="11">November</option><option value="12">December</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label>Sort by</label>
-        <select id="sel-sort">
-          <option value="date-desc">Most recent first</option>
-          <option value="date-asc">Oldest first</option>
-          <option value="temp-desc">Hottest first</option>
-          <option value="temp-asc">Coolest first</option>
-        </select>
-      </div>
+      <div class="control-group"><label>Location</label><select id="sel-location"></select></div>
+      <div class="control-group"><label>Temperature type</label><select id="sel-type"><option value="max">Maximum (Daily High)</option><option value="min">Minimum (Overnight Low)</option></select></div>
+      <div class="control-group"><label>Condition</label><select id="sel-condition"><option value="gte">≥  At or above</option><option value="lte">≤  At or below</option><option value="eq">≈  Closest to</option></select></div>
+      <div class="control-group"><label>Temperature (°C)</label><input type="number" id="inp-threshold" value="40" step="0.5"/></div>
+      <div class="control-group"><label>Month filter</label><select id="sel-month"><option value="0">All months</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+      <div class="control-group"><label>Sort by</label><select id="sel-sort"><option value="date-desc">Most recent first</option><option value="date-asc">Oldest first</option><option value="temp-desc">Hottest first</option><option value="temp-asc">Coolest first</option></select></div>
     </div>
     <button class="btn-search" onclick="runSearch()">
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -215,18 +158,11 @@
     <div id="station-note" class="station-note" style="display:none;"></div>
   </div>
 
-  <!-- Date lookup panel -->
   <div id="panel-date" class="search-panel" style="display:none;">
     <h2>Date Lookup</h2>
     <div class="controls" style="max-width:400px;">
-      <div class="control-group">
-        <label>Location</label>
-        <select id="date-location"></select>
-      </div>
-      <div class="control-group">
-        <label>Date</label>
-        <input type="date" id="date-input"/>
-      </div>
+      <div class="control-group"><label>Location</label><select id="date-location"></select></div>
+      <div class="control-group"><label>Date</label><input type="date" id="date-input"/></div>
     </div>
     <button class="btn-search" style="max-width:260px;margin-top:0.5rem;" onclick="runDateLookup()">
       <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
@@ -234,36 +170,14 @@
     </button>
   </div>
 
-  <!-- Streak search panel -->
   <div id="panel-streak" class="search-panel" style="display:none;">
     <h2>Streak Search</h2>
     <div class="controls">
-      <div class="control-group">
-        <label>Location</label>
-        <select id="streak-location"></select>
-      </div>
-      <div class="control-group">
-        <label>Temperature type</label>
-        <select id="streak-type">
-          <option value="max">Maximum (Daily High)</option>
-          <option value="min">Minimum (Overnight Low)</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label>Condition</label>
-        <select id="streak-condition">
-          <option value="gte">≥  At or above</option>
-          <option value="lte">≤  At or below</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label>Temperature (°C)</label>
-        <input type="number" id="streak-threshold" value="35" step="0.5"/>
-      </div>
-      <div class="control-group">
-        <label>Min streak length (days)</label>
-        <input type="number" id="streak-minlen" value="3" min="2" max="30" step="1"/>
-      </div>
+      <div class="control-group"><label>Location</label><select id="streak-location"></select></div>
+      <div class="control-group"><label>Temperature type</label><select id="streak-type"><option value="max">Maximum (Daily High)</option><option value="min">Minimum (Overnight Low)</option></select></div>
+      <div class="control-group"><label>Condition</label><select id="streak-condition"><option value="gte">≥  At or above</option><option value="lte">≤  At or below</option></select></div>
+      <div class="control-group"><label>Temperature (°C)</label><input type="number" id="streak-threshold" value="35" step="0.5"/></div>
+      <div class="control-group"><label>Min streak length (days)</label><input type="number" id="streak-minlen" value="3" min="2" max="30" step="1"/></div>
     </div>
     <button class="btn-search" onclick="runStreakSearch()">
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -284,12 +198,11 @@
 
 <script>
   const AUS_LOCATIONS = [
-    {name:"Adelaide",  demandKey:"Adelaide",  label:"SA demand"},
-    {name:"Archerfield",demandKey:"Archerfield",label:"QLD demand"},
-    {name:"Bankstown", demandKey:"Bankstown", label:"NSW demand"},
-    {name:"Melbourne", demandKey:"Melbourne", label:"VIC demand"},
+    {name:"Adelaide",   demandKey:"Adelaide",   label:"SA demand"},
+    {name:"Archerfield",demandKey:"Archerfield", label:"QLD demand"},
+    {name:"Bankstown",  demandKey:"Bankstown",   label:"NSW demand"},
+    {name:"Melbourne",  demandKey:"Melbourne",   label:"VIC demand"},
   ];
-
   const JPN_LOCATIONS = [
     {name:"Tokyo",     demandKey:"Tokyo",     label:"Tokyo demand"},
     {name:"Osaka",     demandKey:"Osaka",     label:"Kansai demand"},
@@ -301,38 +214,32 @@
     {name:"Matsuyama", demandKey:"Matsuyama", label:"Shikoku demand"},
     {name:"Kanazawa",  demandKey:"Kanazawa",  label:"Hokuriku demand"},
   ];
-
   const AUS_STATION_INFO = {
     Adelaide:{old:"Kent Town (023090)",current:"West Terrace (023000)",cutYear:2017,
       note:"Observations before 2017 are from <strong>Kent Town station</strong>. From 2017: <strong>West Terrace</strong>."},
     Melbourne:{old:"Regional Office (086071)",current:"Olympic Park (086338)",cutYear:2013,
       note:"Observations before 2013 are from <strong>Regional Office</strong>. From 2013: <strong>Olympic Park</strong>."},
   };
-
   const AUS_SEASONS = {1:"summer",2:"summer",3:"autumn",4:"autumn",5:"autumn",6:"winter",7:"winter",8:"winter",9:"spring",10:"spring",11:"spring",12:"summer"};
   const JPN_SEASONS = {1:"winter",2:"winter",3:"spring",4:"spring",5:"spring",6:"summer",7:"summer",8:"summer",9:"autumn",10:"autumn",11:"autumn",12:"winter"};
   const SEASON_LABEL = {summer:"Summer",autumn:"Autumn",winter:"Winter",spring:"Spring"};
   const MONTH_NAMES = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const MONTH_FULL  = ["","January","February","March","April","May","June","July","August","September","October","November","December"];
 
-  let country    = "aus";
-  let mode       = "search";
-  let ausObs     = null, ausdem = null;
-  let jpnObs     = null, jpndem = null;
-  let allResults = [], currentPage = 1;
-  let dateLookupChart = null;
+  let country = "aus", mode = "search";
+  let ausObs = null, ausdem = null, jpnObs = null, jpndem = null;
+  let allResults = [], currentPage = 1, dateLookupChart = null;
   const PAGE_SIZE = 25;
 
   // ---------------------------------------------------------------------------
-  // Country & mode switching
+  // Country & mode
   // ---------------------------------------------------------------------------
-
   function setCountry(c) {
     country = c;
     document.getElementById("btn-aus").classList.toggle("active", c==="aus");
     document.getElementById("btn-jpn").classList.toggle("active", c==="jpn");
     populateLocationDropdowns();
-    document.getElementById("inp-threshold").value   = c==="aus" ? 40 : 35;
+    document.getElementById("inp-threshold").value    = c==="aus" ? 40 : 35;
     document.getElementById("streak-threshold").value = c==="aus" ? 35 : 30;
     updateStationNote();
     document.getElementById("results-area").innerHTML = "";
@@ -368,29 +275,22 @@
     const loc = document.getElementById("sel-location").value;
     const info = AUS_STATION_INFO[loc];
     if(info) {
-      el.innerHTML = `ℹ️ &nbsp;${info.note}<br>
-        <span style="margin-top:5px;display:inline-block;">
-          Before ${info.cutYear}: <span class="station-badge-old">${info.old}</span>
-          &nbsp; From ${info.cutYear}+: <span class="station-badge-cur">${info.current}</span>
-        </span>`;
+      el.innerHTML = `ℹ️ &nbsp;${info.note}<br><span style="margin-top:5px;display:inline-block;">Before ${info.cutYear}: <span class="station-badge-old">${info.old}</span> &nbsp; From ${info.cutYear}+: <span class="station-badge-cur">${info.current}</span></span>`;
       el.style.display = "block";
-    } else {
-      el.style.display = "none";
-    }
+    } else { el.style.display = "none"; }
   }
 
   // ---------------------------------------------------------------------------
   // Data loading
   // ---------------------------------------------------------------------------
-
   async function loadObs() {
     if(country==="aus") {
       if(ausObs) return true;
-      try { const r=await fetch("aus_observations.json"); if(!r.ok)throw new Error(); ausObs=await r.json(); return true; }
+      try { const r=await fetch("aus_observations.json"); if(!r.ok) throw new Error(); ausObs=await r.json(); return true; }
       catch(e) { showError("Could not load aus_observations.json"); return false; }
     } else {
       if(jpnObs) return true;
-      try { const r=await fetch("japan_observations.json"); if(!r.ok)throw new Error(); jpnObs=await r.json(); return true; }
+      try { const r=await fetch("japan_observations.json"); if(!r.ok) throw new Error(); jpnObs=await r.json(); return true; }
       catch(e) { showError("Could not load japan_observations.json"); return false; }
     }
   }
@@ -405,20 +305,17 @@
     }
   }
 
-  function obs()    { return country==="aus" ? ausObs : jpnObs; }
-  function dem()    { return country==="aus" ? ausdem : jpndem; }
-  function seasons(){ return country==="aus" ? AUS_SEASONS : JPN_SEASONS; }
-
-  function showError(msg) { document.getElementById("results-area").innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${msg}</p></div>`; }
-  function showLoading(msg){ document.getElementById("results-area").innerHTML=`<div class="loading"><div class="spinner"></div>${msg}</div>`; }
+  function obs()     { return country==="aus" ? ausObs : jpnObs; }
+  function dem()     { return country==="aus" ? ausdem : jpndem; }
+  function seasons() { return country==="aus" ? AUS_SEASONS : JPN_SEASONS; }
+  function showError(msg)   { document.getElementById("results-area").innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${msg}</p></div>`; }
+  function showLoading(msg) { document.getElementById("results-area").innerHTML=`<div class="loading"><div class="spinner"></div>${msg}</div>`; }
 
   // ---------------------------------------------------------------------------
   // Demand helpers
   // ---------------------------------------------------------------------------
-
   function getDemand(loc, dateStr) {
-    const d = dem();
-    if(!d) return null;
+    const d = dem(); if(!d) return null;
     return d[loc]?.days?.[dateStr] || null;
   }
 
@@ -448,16 +345,15 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Temperature colour class
+  // Temp colour
   // ---------------------------------------------------------------------------
-
   function tempCls(t, type) {
     if(country==="aus") {
-      if(type==="max") { if(t>=40)return"hot"; if(t>=35)return"warm"; }
-      else             { if(t<=0)return"cold"; if(t<=5)return"cool"; }
+      if(type==="max") { if(t>=40) return "hot"; if(t>=35) return "warm"; }
+      else             { if(t<=0)  return "cold"; if(t<=5) return "cool"; }
     } else {
-      if(type==="max") { if(t>=35)return"hot"; if(t>=30)return"warm"; }
-      else             { if(t<=-5)return"cold"; if(t<=0)return"cool"; }
+      if(type==="max") { if(t>=35) return "hot"; if(t>=30) return "warm"; }
+      else             { if(t<=-5) return "cold"; if(t<=0) return "cool"; }
     }
     return "";
   }
@@ -465,16 +361,15 @@
   // ---------------------------------------------------------------------------
   // Threshold search
   // ---------------------------------------------------------------------------
-
   async function runSearch() {
     if(!await loadObs()) return;
     await loadDemand();
-    const loc   = document.getElementById("sel-location").value;
-    const type  = document.getElementById("sel-type").value;
-    const cond  = document.getElementById("sel-condition").value;
-    const thresh= parseFloat(document.getElementById("inp-threshold").value);
-    const mf    = parseInt(document.getElementById("sel-month").value);
-    const sort  = document.getElementById("sel-sort").value;
+    const loc    = document.getElementById("sel-location").value;
+    const type   = document.getElementById("sel-type").value;
+    const cond   = document.getElementById("sel-condition").value;
+    const thresh = parseFloat(document.getElementById("inp-threshold").value);
+    const mf     = parseInt(document.getElementById("sel-month").value);
+    const sort   = document.getElementById("sel-sort").value;
     if(isNaN(thresh)) { alert("Please enter a valid temperature."); return; }
     const recs = obs()[loc]?.[type];
     if(!recs) { alert("No data for this selection."); return; }
@@ -486,19 +381,18 @@
       if(cond==="lte") return t<=thresh;
       return Math.abs(t-thresh)<=1.0;
     });
-    if(cond==="eq") filtered.sort((a,b)=>Math.abs(a[3]-thresh)-Math.abs(b[3]-thresh));
-    if(sort==="date-desc") filtered.sort((a,b)=>b[0]-a[0]||b[1]-a[1]||b[2]-a[2]);
-    else if(sort==="date-asc")  filtered.sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-a[2]);
+    if(cond==="eq")         filtered.sort((a,b)=>Math.abs(a[3]-thresh)-Math.abs(b[3]-thresh));
+    if(sort==="date-desc")  filtered.sort((a,b)=>b[0]-a[0]||b[1]-a[1]||b[2]-a[2]);
+    else if(sort==="date-asc")  filtered.sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
     else if(sort==="temp-desc") filtered.sort((a,b)=>b[3]-a[3]);
     else if(sort==="temp-asc")  filtered.sort((a,b)=>a[3]-b[3]);
-    allResults=filtered; currentPage=1;
-    renderResults(loc,type,cond,thresh,mf);
+    allResults = filtered; currentPage = 1;
+    renderResults(loc, type, cond, thresh, mf);
   }
 
   // ---------------------------------------------------------------------------
   // Date lookup
   // ---------------------------------------------------------------------------
-
   async function runDateLookup() {
     if(!await loadObs()) return;
     await loadDemand();
@@ -516,14 +410,15 @@
       area.innerHTML=`<div class="empty"><div class="empty-icon">🌡️</div><h3>No data found</h3><p>No observations for ${d} ${MONTH_NAMES[m]} ${y} at ${loc}.</p></div>`;
       return;
     }
-    const tmax=maxRec?maxRec[3]:null, tmin=minRec?minRec[3]:null;
-    const season = SEASON_LABEL[seasons()[m]];
-    const stInfo = country==="aus" ? AUS_STATION_INFO[loc] : null;
-    const isOld  = stInfo && y < stInfo.cutYear;
+    const tmax = maxRec ? maxRec[3] : null;
+    const tmin = minRec ? minRec[3] : null;
+    const season  = SEASON_LABEL[seasons()[m]];
+    const stInfo  = country==="aus" ? AUS_STATION_INFO[loc] : null;
+    const isOld   = stInfo && y < stInfo.cutYear;
     const stBadge = isOld ? `<span class="station-badge-old">${stInfo.old}</span>`
                   : (stInfo ? `<span class="station-badge-cur">${stInfo.current}</span>` : "");
-    const demand = getDemand(loc, dv);
-    const demLbl = demandLabel(loc);
+    const demand  = getDemand(loc, dv);
+    const demLbl  = demandLabel(loc);
     let tmaxCtx="", tminCtx="";
     if(tmax!==null) {
       const sm=(o[loc]?.max||[]).filter(r=>r[1]===m).map(r=>r[3]);
@@ -533,6 +428,7 @@
       const sm=(o[loc]?.min||[]).filter(r=>r[1]===m).map(r=>r[3]);
       if(sm.length) tminCtx=`${MONTH_NAMES[m]} ${((sm.filter(v=>v<=tmin).length/sm.length)*100).toFixed(0)}th percentile`;
     }
+
     area.innerHTML=`
       <div class="date-lookup-card">
         <h3>${loc} — ${d} ${MONTH_FULL[m]} ${y}
@@ -541,8 +437,9 @@
         <div class="lookup-grid">
           ${tmax!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Maximum</div><div class="lookup-item-value ${tempCls(tmax,'max')}">${tmax}°C</div><div class="lookup-item-sub">${tmaxCtx}</div></div>`:""}
           ${tmin!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Minimum</div><div class="lookup-item-value ${tempCls(tmin,'min')}">${tmin}°C</div><div class="lookup-item-sub">${tminCtx}</div></div>`:""}
-          ${demand?`<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value" style="font-size:1.15rem;">${demand.peak.toLocaleString()} MW</div><div class="lookup-item-sub">${demandBadge(loc,dv)}</div></div>`
-                  :`<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
+          ${demand
+            ? `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value" style="font-size:1.15rem;">${demand.peak.toLocaleString()} MW</div><div class="lookup-item-sub">${demandBadge(loc,dv)}</div></div>`
+            : `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
           <div class="lookup-item"><div class="lookup-item-label">How long ago</div><div class="lookup-item-value" style="font-size:1.05rem;font-family:'DM Sans',sans-serif;">${yearsAgo(y)}</div><div class="lookup-item-sub">${season}</div></div>
         </div>
         ${demand && tmax!==null ? `
@@ -551,7 +448,7 @@
             All ${MONTH_FULL[m]} days · ${loc} · Tmax vs ${demLbl}. Red dot is ${d} ${MONTH_FULL[m]} ${y}.
           </div>
           <div style="position:relative;width:100%;height:260px;">
-            <canvas id="lookup-scatter" role="img" aria-label="Scatter plot of ${loc} ${MONTH_FULL[m]} Tmax vs ${demLbl}. The date ${d} ${MONTH_FULL[m]} ${y} is highlighted in red.">${loc} ${MONTH_FULL[m]}: Tmax ${tmax}°C, ${demLbl} ${demand.peak.toLocaleString()} MW on ${d} ${MONTH_FULL[m]} ${y}.</canvas>
+            <canvas id="lookup-scatter"></canvas>
           </div>
           <div style="display:flex;align-items:center;gap:1.25rem;margin-top:0.6rem;font-size:0.72rem;color:var(--muted);">
             <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:#b5d4f4;border:1px solid #378add;display:inline-block;"></span>Historical ${MONTH_NAMES[m]} days</span>
@@ -577,38 +474,16 @@
         const yMin=Math.floor(Math.min(...allY)*0.97), yMax=Math.ceil(Math.max(...allY,demand.peak)*1.03);
         dateLookupChart = new Chart(canvas, {
           type:'scatter',
-          data:{
-            datasets:[
-              {
-                label:`Historical ${MONTH_FULL[m]}`,
-                data:pts,
-                backgroundColor:'rgba(53,130,221,0.22)',
-                borderColor:'rgba(53,130,221,0.45)',
-                borderWidth:1,
-                pointRadius:4,
-                pointHoverRadius:5,
-              },
-              {
-                label:`${d} ${MONTH_NAMES[m]} ${y}`,
-                data:[{x:tmax,y:demand.peak}],
-                backgroundColor:'#c0390b',
-                borderColor:'#8b1a1a',
-                borderWidth:1.5,
-                pointRadius:9,
-                pointHoverRadius:10,
-              }
-            ]
-          },
+          data:{datasets:[
+            {label:`Historical ${MONTH_FULL[m]}`,data:pts,backgroundColor:'rgba(53,130,221,0.22)',borderColor:'rgba(53,130,221,0.45)',borderWidth:1,pointRadius:4,pointHoverRadius:5},
+            {label:`${d} ${MONTH_NAMES[m]} ${y}`,data:[{x:tmax,y:demand.peak}],backgroundColor:'#c0390b',borderColor:'#8b1a1a',borderWidth:1.5,pointRadius:9,pointHoverRadius:10}
+          ]},
           options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            plugins:{
-              legend:{display:false},
-              tooltip:{callbacks:{label:ctx=>{
-                const tag=ctx.datasetIndex===1?` — ${d} ${MONTH_NAMES[m]} ${y}`:'';
-                return`${ctx.parsed.x}°C · ${ctx.parsed.y.toLocaleString()} MW${tag}`;
-              }}}
-            },
+            responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+              const tag=ctx.datasetIndex===1?` — ${d} ${MONTH_NAMES[m]} ${y}`:'';
+              return`${ctx.parsed.x}°C · ${ctx.parsed.y.toLocaleString()} MW${tag}`;
+            }}}},
             scales:{
               x:{min:xMin,max:xMax,title:{display:true,text:'Daily maximum (°C)',color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>v+'°'}},
               y:{min:yMin,max:yMax,title:{display:true,text:`${demLbl} (MW)`,color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>(v/1000).toFixed(1)+'k'}}
@@ -620,10 +495,17 @@
     }
   }
 
+  function jumpToDateLookup(loc, y, m, d) {
+    setMode('date');
+    document.getElementById('date-location').value = loc;
+    document.getElementById('date-input').value = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    runDateLookup();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
   // ---------------------------------------------------------------------------
   // Streak search
   // ---------------------------------------------------------------------------
-
   async function runStreakSearch() {
     if(!await loadObs()) return;
     await loadDemand();
@@ -633,11 +515,10 @@
     const thresh = parseFloat(document.getElementById("streak-threshold").value);
     const minLen = parseInt(document.getElementById("streak-minlen").value);
     if(isNaN(thresh)) { alert("Please enter a valid temperature."); return; }
-    if(isNaN(minLen) || minLen < 2) { alert("Minimum streak length must be 2 or more."); return; }
+    if(isNaN(minLen)||minLen<2) { alert("Minimum streak length must be 2 or more."); return; }
     showLoading("Finding streaks…");
     await new Promise(r=>setTimeout(r,10));
-    const streaks = findStreaks(loc, type, cond, thresh, minLen);
-    renderStreakResults(loc, type, cond, thresh, minLen, streaks);
+    renderStreakResults(loc, type, cond, thresh, minLen, findStreaks(loc, type, cond, thresh, minLen));
   }
 
   function findStreaks(loc, type, cond, thresh, minLen) {
@@ -645,22 +526,18 @@
     if(!recs) return [];
     const filtered = recs
       .filter(([y,m,d,t]) => cond==="gte" ? t>=thresh : t<=thresh)
-      .sort((a,b) => a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
+      .sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
     if(!filtered.length) return [];
     const streaks = [];
     let current = [filtered[0]];
     for(let i=1; i<filtered.length; i++) {
       const prev=filtered[i-1], curr=filtered[i];
-      const diff = Math.round((new Date(curr[0],curr[1]-1,curr[2]) - new Date(prev[0],prev[1]-1,prev[2])) / 86400000);
-      if(diff===1) {
-        current.push(curr);
-      } else {
-        if(current.length >= minLen) streaks.push([...current]);
-        current = [curr];
-      }
+      const diff=Math.round((new Date(curr[0],curr[1]-1,curr[2])-new Date(prev[0],prev[1]-1,prev[2]))/86400000);
+      if(diff===1) { current.push(curr); }
+      else { if(current.length>=minLen) streaks.push([...current]); current=[curr]; }
     }
-    if(current.length >= minLen) streaks.push([...current]);
-    streaks.sort((a,b) => {
+    if(current.length>=minLen) streaks.push([...current]);
+    streaks.sort((a,b)=>{
       const al=a[a.length-1], bl=b[b.length-1];
       return bl[0]-al[0]||bl[1]-al[1]||bl[2]-al[2];
     });
@@ -669,10 +546,10 @@
 
   function streakPeakDemand(loc, streak) {
     let best=null, bestPeak=-1;
-    streak.forEach(([y,m,d]) => {
+    streak.forEach(([y,m,d])=>{
       const ds=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const info=getDemand(loc,ds);
-      if(info && info.peak > bestPeak) { bestPeak=info.peak; best={dateStr:ds,...info}; }
+      if(info && info.peak>bestPeak) { bestPeak=info.peak; best={dateStr:ds,...info}; }
     });
     return best;
   }
@@ -688,7 +565,7 @@
     const longest = Math.max(...streaks.map(s=>s.length));
     const latest  = streaks[0];
     const latestStart = latest[0];
-    const rows = streaks.map(streak => {
+    const rows = streaks.map(streak=>{
       const first=streak[0], last=streak[streak.length-1];
       const temps=streak.map(r=>r[3]);
       const peakT=Math.max(...temps);
@@ -721,7 +598,8 @@
       <div class="results-table-wrap">
         <table>
           <thead><tr>
-            <th>Start</th><th>End</th><th>Days</th><th>${type==="max"?"Hottest":"Coldest"}</th><th>Mean temp</th>
+            <th>Start</th><th>End</th><th>Days</th>
+            <th>${type==="max"?"Hottest":"Coldest"}</th><th>Mean temp</th>
             ${hasDem?`<th>${demandLabel(loc)} peak day</th>`:""}
             <th>How long ago</th>
           </tr></thead>
@@ -731,27 +609,27 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Render threshold results
+  // Threshold results
   // ---------------------------------------------------------------------------
-
-  function renderResults(loc,type,cond,thresh,mf) {
-    const area=document.getElementById("results-area");
-    const total=allResults.length;
-    const hasDem=!!dem();
-    if(total===0){
+  function renderResults(loc, type, cond, thresh, mf) {
+    const area = document.getElementById("results-area");
+    const total = allResults.length;
+    const hasDem = !!dem();
+    if(total===0) {
       const ct=cond==="gte"?"≥":cond==="lte"?"≤":"≈";
       area.innerHTML=`<div class="empty"><div class="empty-icon">🌡️</div><h3>No records found</h3><p>No days where the ${type==="max"?"maximum":"minimum"} temperature was ${ct} ${thresh}°C at ${loc}${mf?` in ${MONTH_FULL[mf]}`:""}.</p></div>`;
       return;
     }
-    const temps=allResults.map(r=>r[3]);
-    const maxT=Math.max(...temps), avgT=(temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1);
-    const latest=[...allResults].sort((a,b)=>b[0]-a[0]||b[1]-a[1]||b[2]-a[2])[0];
+    const temps = allResults.map(r=>r[3]);
+    const maxT  = Math.max(...temps);
+    const avgT  = (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1);
+    const latest= [...allResults].sort((a,b)=>b[0]-a[0]||b[1]-a[1]||b[2]-a[2])[0];
     const yc={};allResults.forEach(([y])=>yc[y]=(yc[y]||0)+1);
-    const topY=Object.entries(yc).sort((a,b)=>b[1]-a[1])[0];
-    const stInfo=country==="aus"?AUS_STATION_INFO[loc]:null;
-    const oldCnt=stInfo?allResults.filter(r=>r[4]===1).length:0;
+    const topY  = Object.entries(yc).sort((a,b)=>b[1]-a[1])[0];
+    const stInfo= country==="aus" ? AUS_STATION_INFO[loc] : null;
+    const oldCnt= stInfo ? allResults.filter(r=>r[4]===1).length : 0;
     const oldNote=(stInfo&&oldCnt>0)?`<span style="font-size:0.76rem;color:var(--muted);margin-left:0.4rem;">(${oldCnt} from <span class="station-badge-old">${stInfo.old}</span>)</span>`:"";
-    const ct=cond==="gte"?`≥ ${thresh}°C`:cond==="lte"?`≤ ${thresh}°C`:`≈ ${thresh}°C`;
+    const ct    = cond==="gte"?`≥ ${thresh}°C`:cond==="lte"?`≤ ${thresh}°C`:`≈ ${thresh}°C`;
     area.innerHTML=`
       <div class="results-header">
         <span class="results-title">${loc} — ${type==="max"?"Max":"Min"} ${ct}${mf?` in ${MONTH_FULL[mf]}`:""}</span>
@@ -766,22 +644,23 @@
         <div class="stat-card"><div class="stat-label">Most active year</div><div class="stat-value">${topY[0]}</div><div class="stat-sub">${topY[1]} day${topY[1]!==1?"s":""}</div></div>
       </div>
       <div class="results-table-wrap">${renderTable(loc,type,hasDem)}</div>
+      <div style="font-size:0.73rem;color:var(--muted);margin-top:0.5rem;padding-left:0.25rem;">Click any row to view the temperature-demand scatter for that day.</div>
       ${renderPagination()}`;
   }
 
-  function renderTable(loc,type,hasDem) {
-    const start=(currentPage-1)*PAGE_SIZE;
-    const page=allResults.slice(start,start+PAGE_SIZE);
-    const stInfo=country==="aus"?AUS_STATION_INFO[loc]:null;
-    const demLbl=demandLabel(loc);
-    const rows=page.map(r=>{
-      const [y,m,d,t,oldFlag]=r;
-      const season=seasons()[m];
-      const tc=tempCls(t,type);
-      const ds=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const isOld=oldFlag===1;
-      const sb=stInfo?(isOld?`<span class="station-badge-old">${stInfo.old}</span>`:`<span class="station-badge-cur">${stInfo.current}</span>`):"";
-      return`<tr class="${isOld?"row-old":""}">
+  function renderTable(loc, type, hasDem) {
+    const start  = (currentPage-1)*PAGE_SIZE;
+    const page   = allResults.slice(start, start+PAGE_SIZE);
+    const stInfo = country==="aus" ? AUS_STATION_INFO[loc] : null;
+    const demLbl = demandLabel(loc);
+    const rows = page.map(r => {
+      const [y,m,d,t,oldFlag] = r;
+      const season = seasons()[m];
+      const tc     = tempCls(t, type);
+      const ds     = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const isOld  = oldFlag===1;
+      const sb     = stInfo ? (isOld ? `<span class="station-badge-old">${stInfo.old}</span>` : `<span class="station-badge-cur">${stInfo.current}</span>`) : "";
+      return `<tr class="${isOld?"row-old":""}" style="cursor:pointer;" onclick="jumpToDateLookup('${loc}',${y},${m},${d})">
         <td class="td-date">${d} ${MONTH_NAMES[m]} ${y}</td>
         <td><span class="td-season season-${season}">${SEASON_LABEL[season]}</span></td>
         <td class="td-temp ${tc}">${t}°C</td>
@@ -790,7 +669,7 @@
         <td class="td-ago">${yearsAgo(y)}</td>
       </tr>`;
     }).join("");
-    return`<table><thead><tr>
+    return `<table><thead><tr>
       <th>Date</th><th>Season</th><th>Temperature</th>
       ${stInfo?"<th>Station</th>":""}
       ${hasDem?`<th>${demLbl}</th>`:""}
@@ -799,7 +678,7 @@
   }
 
   function renderPagination() {
-    const total=allResults.length, pages=Math.ceil(total/PAGE_SIZE);
+    const total = allResults.length, pages = Math.ceil(total/PAGE_SIZE);
     if(pages<=1) return "";
     let btns="";
     for(let i=1;i<=pages;i++){
@@ -807,7 +686,7 @@
       else if(Math.abs(i-currentPage)===3) btns+=`<span class="page-info">…</span>`;
     }
     const s=(currentPage-1)*PAGE_SIZE+1, e=Math.min(currentPage*PAGE_SIZE,total);
-    return`<div class="pagination">
+    return `<div class="pagination">
       <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?"disabled":""}>‹</button>
       ${btns}
       <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?"disabled":""}>›</button>
@@ -816,9 +695,9 @@
   }
 
   function goPage(p) {
-    const pages=Math.ceil(allResults.length/PAGE_SIZE);
+    const pages = Math.ceil(allResults.length/PAGE_SIZE);
     if(p<1||p>pages) return;
-    currentPage=p;
+    currentPage = p;
     renderResults(
       document.getElementById("sel-location").value,
       document.getElementById("sel-type").value,
@@ -830,8 +709,8 @@
   }
 
   function yearsAgo(y) {
-    const d=new Date().getFullYear()-y;
-    if(d===0)return"This year";if(d===1)return"1 year ago";return`${d} years ago`;
+    const d = new Date().getFullYear()-y;
+    if(d===0) return "This year"; if(d===1) return "1 year ago"; return `${d} years ago`;
   }
 
   window.addEventListener("load", () => {
@@ -839,6 +718,5 @@
     loadObs().then(ok => { if(ok) { loadDemand(); runSearch(); } });
   });
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </body>
 </html>
