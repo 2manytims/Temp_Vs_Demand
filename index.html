@@ -393,7 +393,7 @@
   // ---------------------------------------------------------------------------
   // Date lookup
   // ---------------------------------------------------------------------------
-  async function runDateLookup() {
+  async function runDateLookup(scatterType) {
     if(!await loadObs()) return;
     await loadDemand();
     const loc = document.getElementById("date-location").value;
@@ -442,7 +442,7 @@
             : `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
           <div class="lookup-item"><div class="lookup-item-label">How long ago</div><div class="lookup-item-value" style="font-size:1.05rem;font-family:'DM Sans',sans-serif;">${yearsAgo(y)}</div><div class="lookup-item-sub">${season}</div></div>
         </div>
-        ${demand && tmax!==null ? `
+        ${demand && (tmax!==null || tmin!==null) ? `
         <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
           <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">
             All ${MONTH_FULL[m]} days · ${loc} · Tmax vs ${demLbl}. Red dot is ${d} ${MONTH_FULL[m]} ${y}.
@@ -457,11 +457,14 @@
         </div>` : ""}
       </div>`;
 
-    if(demand && tmax!==null) {
+    if(demand && scatterHighlightT!==null && scatterHighlightT!==undefined) {
       if(dateLookupChart) { dateLookupChart.destroy(); dateLookupChart=null; }
-      const maxRecs = obs()[loc]?.max || [];
+      const _sType = scatterType || 'max';
+      const scatterRecs = obs()[loc]?.[_sType] || [];
+      const scatterAxisLabel = _sType === 'max' ? 'Daily maximum (°C)' : 'Daily minimum (°C)';
+      const scatterHighlightT = _sType === 'max' ? tmax : tmin;
       const pts = [];
-      maxRecs.forEach(([ry,rm,rd,rt]) => {
+      scatterRecs.forEach(([ry,rm,rd,rt]) => {
         if(rm!==m) return;
         const ds=`${ry}-${String(rm).padStart(2,"0")}-${String(rd).padStart(2,"0")}`;
         const di=getDemand(loc,ds);
@@ -470,13 +473,13 @@
       const canvas = document.getElementById("lookup-scatter");
       if(canvas && pts.length>0) {
         const allX=pts.map(p=>p.x), allY=pts.map(p=>p.y);
-        const xMin=Math.floor(Math.min(...allX)-1), xMax=Math.ceil(Math.max(...allX,tmax)+1);
+        const xMin=Math.floor(Math.min(...allX)-1), xMax=Math.ceil(Math.max(...allX,(scatterHighlightT||0))+1);
         const yMin=Math.floor(Math.min(...allY)*0.97), yMax=Math.ceil(Math.max(...allY,demand.peak)*1.03);
         dateLookupChart = new Chart(canvas, {
           type:'scatter',
           data:{datasets:[
             {label:`Historical ${MONTH_FULL[m]}`,data:pts,backgroundColor:'rgba(53,130,221,0.22)',borderColor:'rgba(53,130,221,0.45)',borderWidth:1,pointRadius:4,pointHoverRadius:5},
-            {label:`${d} ${MONTH_NAMES[m]} ${y}`,data:[{x:tmax,y:demand.peak}],backgroundColor:'#c0390b',borderColor:'#8b1a1a',borderWidth:1.5,pointRadius:9,pointHoverRadius:10}
+            {label:`${d} ${MONTH_NAMES[m]} ${y}`,data:[{x:scatterHighlightT,y:demand.peak}],backgroundColor:'#c0390b',borderColor:'#8b1a1a',borderWidth:1.5,pointRadius:9,pointHoverRadius:10}
           ]},
           options:{
             responsive:true,maintainAspectRatio:false,
@@ -485,7 +488,7 @@
               return`${ctx.parsed.x}°C · ${ctx.parsed.y.toLocaleString()} MW${tag}`;
             }}}},
             scales:{
-              x:{min:xMin,max:xMax,title:{display:true,text:'Daily maximum (°C)',color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>v+'°'}},
+              x:{min:xMin,max:xMax,title:{display:true,text:scatterAxisLabel,color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>v+'°'}},
               y:{min:yMin,max:yMax,title:{display:true,text:`${demLbl} (MW)`,color:'#5a7080',font:{size:11}},grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#5a7080',font:{size:11},callback:v=>(v/1000).toFixed(1)+'k'}}
             },
             layout:{padding:{top:8,right:16,bottom:4,left:4}}
@@ -495,11 +498,13 @@
     }
   }
 
-  function jumpToDateLookup(loc, y, m, d) {
+  let _jumpType = "max";
+  function jumpToDateLookup(loc, y, m, d, type) {
+    _jumpType = type || "max";
     setMode('date');
     document.getElementById('date-location').value = loc;
     document.getElementById('date-input').value = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    runDateLookup();
+    runDateLookup(_jumpType);
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
@@ -660,7 +665,7 @@
       const ds     = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const isOld  = oldFlag===1;
       const sb     = stInfo ? (isOld ? `<span class="station-badge-old">${stInfo.old}</span>` : `<span class="station-badge-cur">${stInfo.current}</span>`) : "";
-      return `<tr class="${isOld?"row-old":""}" style="cursor:pointer;" onclick="jumpToDateLookup('${loc}',${y},${m},${d})">
+      return `<tr class="${isOld?"row-old":""}" style="cursor:pointer;" onclick="jumpToDateLookup('${loc}',${y},${m},${d},'${type}')">
         <td class="td-date">${d} ${MONTH_NAMES[m]} ${y}</td>
         <td><span class="td-season season-${season}">${SEASON_LABEL[season]}</span></td>
         <td class="td-temp ${tc}">${t}°C</td>
