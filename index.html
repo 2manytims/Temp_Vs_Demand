@@ -431,6 +431,46 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Companion station tiles (Bankstown → Obs Hill, Archerfield → Brisbane Airport)
+  // ---------------------------------------------------------------------------
+  const COMPANION_STATIONS = {
+    Bankstown:   { key: "Sydney_Obs_Hill",  label: "Obs Hill" },
+    Archerfield: { key: "Brisbane_Airport", label: "Brisbane Airport" },
+  };
+
+  function companionTiles(loc, y, m, d) {
+    const comp = COMPANION_STATIONS[loc];
+    if(!comp || !ausObs) return "";
+    const o = ausObs[comp.key];
+    if(!o) return "";
+    const maxRec = o.max?.find(r => r[0]===y && r[1]===m && r[2]===d);
+    const minRec = o.min?.find(r => r[0]===y && r[1]===m && r[2]===d);
+    if(!maxRec && !minRec) return "";
+    let html = "";
+    if(maxRec) {
+      const t = maxRec[3];
+      const monthly = (o.max||[]).filter(r=>r[1]===m).map(r=>r[3]);
+      const pct = monthly.length ? ((monthly.filter(v=>v<=t).length/monthly.length)*100).toFixed(0) : null;
+      html += `<div class="lookup-item" style="border-left:3px solid var(--border);">
+        <div class="lookup-item-label">${comp.label} Max</div>
+        <div class="lookup-item-value ${tempCls(t,'max')}">${t}°C</div>
+        ${pct!==null?`<div class="lookup-item-sub">${MONTH_NAMES[m]} ${pct}th percentile</div>`:""}
+      </div>`;
+    }
+    if(minRec) {
+      const t = minRec[3];
+      const monthly = (o.min||[]).filter(r=>r[1]===m).map(r=>r[3]);
+      const pct = monthly.length ? ((monthly.filter(v=>v<=t).length/monthly.length)*100).toFixed(0) : null;
+      html += `<div class="lookup-item" style="border-left:3px solid var(--border);">
+        <div class="lookup-item-label">${comp.label} Min</div>
+        <div class="lookup-item-value ${tempCls(t,'min')}">${t}°C</div>
+        ${pct!==null?`<div class="lookup-item-sub">${MONTH_NAMES[m]} ${pct}th percentile</div>`:""}
+      </div>`;
+    }
+    return html;
+  }
+
+  // ---------------------------------------------------------------------------
   // Temp colour
   // ---------------------------------------------------------------------------
   function tempCls(t, type) {
@@ -547,6 +587,7 @@
           ${tmax!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Maximum</div><div class="lookup-item-value ${tempCls(tmax,'max')}">${tmax}°C</div><div class="lookup-item-sub">${tmaxCtx}</div></div>`:""}
           ${tmin!==null?`<div class="lookup-item"><div class="lookup-item-label">Daily Minimum</div><div class="lookup-item-value ${tempCls(tmin,'min')}">${tmin}°C</div><div class="lookup-item-sub">${tminCtx}</div></div>`:""}
           ${metarHTML}
+          ${country==="aus" ? companionTiles(loc, y, m, d) : ""}
           ${demand
             ? `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value" style="font-size:1.15rem;">${demand.peak.toLocaleString()} MW</div><div class="lookup-item-sub">${demandBadge(loc,dv)}</div></div>`
             : `<div class="lookup-item"><div class="lookup-item-label">${demLbl}</div><div class="lookup-item-value d-na" style="font-size:0.95rem;font-family:'DM Sans',sans-serif;">Not available</div><div class="lookup-item-sub">${country==="aus"?"From 2010":"2016 to present"}</div></div>`}
